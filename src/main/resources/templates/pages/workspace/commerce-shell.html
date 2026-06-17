@@ -1,0 +1,15 @@
+<th:block xmlns:th="http://www.thymeleaf.org" th:fragment="content">
+    <section class="setup-card" th:if="${!workspaceUser.platformAdmin and activeSection == 'commerce' and commerceView != null}">
+        <p class="panel-kicker">Commerce</p>
+        <h1>Commerce Flow</h1>
+        <div class="setup-error" th:if="${commerceError}" th:text="${commerceError}">Commerce error</div>
+        <div class="empty-state" th:if="${commerceMessage}">
+            <strong th:text="${commerceMessage}">Commerce message</strong>
+        </div>
+
+        <th:block th:replace="~{pages/workspace/cart :: content}"></th:block>
+        <th:block th:replace="~{pages/workspace/purchase-requests :: content}"></th:block>
+        <th:block th:replace="~{pages/workspace/approvals :: content}"></th:block>
+        <th:block th:replace="~{pages/workspace/order-drafts :: content}"></th:block>
+    </section>
+</th:block>

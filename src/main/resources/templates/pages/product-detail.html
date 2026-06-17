@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'SupplyHub | ' + ${product.productName}">SupplyHub | Product Detail</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard/dist/web/static/pretendard.css">
+    <link rel="stylesheet" th:href="@{/css/base.css}" href="/css/base.css">
+    <link rel="stylesheet" th:href="@{/css/product-detail.css}" href="/css/product-detail.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">메인 콘텐츠로 이동</a>
+<div class="page-shell">
+    <div th:replace="~{layout/header :: siteHeader}"></div>
+
+    <main class="catalog-page" id="main-content">
+        <section class="product-detail-shell">
+            <div class="product-detail-main">
+                <div class="setup-error" th:if="${commerceError}" th:text="${commerceError}">Commerce error</div>
+                <div class="empty-state" th:if="${commerceMessage}">
+                    <strong th:text="${commerceMessage}">Commerce message</strong>
+                </div>
+
+                <div class="product-detail-image-frame">
+                    <img class="product-detail-image"
+                         th:if="${product.imageUrl != null && !product.imageUrl.isBlank()}"
+                         th:src="@{${product.imageUrl}}"
+                         th:alt="${product.productName}">
+                    <div class="product-detail-image product-image-fallback"
+                         th:if="${product.imageUrl == null || product.imageUrl.isBlank()}">
+                        <span th:text="${product.productName}">상품 이미지 없음</span>
+                    </div>
+                </div>
+
+                <p class="section-kicker">Product Detail</p>
+                <h1 th:text="${product.productName}">상품명</h1>
+                <p class="product-detail-lead"
+                   th:text="${product.description != null && !product.description.isBlank() ? product.description : '등록된 상품 설명이 없습니다.'}">
+                    상품 설명
+                </p>
+
+                <dl class="product-detail-grid">
+                    <div>
+                        <dt>카테고리</dt>
+                        <dd th:text="${product.parentCategoryName != null ? product.parentCategoryName + ' / ' + product.categoryName : product.categoryName}">
+                            카테고리
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>브랜드</dt>
+                        <dd th:text="${product.brand != null && !product.brand.isBlank() ? product.brand : '브랜드 미지정'}">브랜드</dd>
+                    </div>
+                    <div>
+                        <dt>SKU</dt>
+                        <dd th:text="${product.sku}">SKU-001</dd>
+                    </div>
+                    <div>
+                        <dt>최소 주문 수량</dt>
+                        <dd th:text="${product.minOrderQty} + '개'">1개</dd>
+                    </div>
+                    <div>
+                        <dt>기준 단가</dt>
+                        <dd th:text="|${product.currencyCode} ${#numbers.formatDecimal(product.unitPrice, 1, 2)}|">
+                            KRW 10,000.00
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>조회 상태</dt>
+                        <dd>활성 상품</dd>
+                    </div>
+                </dl>
+
+                <div class="hero-actions">
+                    <a class="hero-button hero-button-primary" href="/products">목록으로 돌아가기</a>
+                    <a class="hero-button hero-button-secondary" href="/#access-panel" th:if="${user == null}">회원가입 / 거래 시작</a>
+                    <a class="hero-button hero-button-secondary" href="/workspace" th:if="${user != null}">워크스페이스 이동</a>
+                </div>
+
+                <form class="purchase-form" th:if="${user != null and !isPlatformAdmin}" th:action="@{/commerce/cart/items}" method="post">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <input type="hidden" name="productId" th:value="${product.id}">
+                    <label class="purchase-form-label" for="quantity">수량</label>
+                    <div class="purchase-form-row">
+                        <input class="purchase-form-input"
+                               id="quantity"
+                               name="quantity"
+                               type="number"
+                               min="1"
+                               th:attr="min=${product.minOrderQty}"
+                               th:value="${product.minOrderQty}">
+                        <button class="hero-button hero-button-primary" type="submit">장바구니 담기</button>
+                    </div>
+                </form>
+            </div>
+
+            <aside class="product-detail-side">
+                <p class="panel-kicker">Purchase Snapshot</p>
+                <h2>핵심 구매 정보</h2>
+                <ul class="panel-notes">
+                    <li>표시된 가격은 현재 등록된 기준 단가입니다.</li>
+                    <li>회사별 계약 단가와 재고는 아직 현재 모델 범위에 포함되지 않습니다.</li>
+                    <li>로그인한 회사 사용자는 이 화면에서 장바구니에 상품을 담을 수 있습니다.</li>
+                </ul>
+            </aside>
+        </section>
+    </main>
+
+    <div th:replace="~{layout/footer :: siteFooter}"></div>
+</div>
+</body>
+</html>

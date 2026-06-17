@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SupplyHub | Platform Admin</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard/dist/web/static/pretendard.css">
+    <link rel="stylesheet" th:href="@{/css/base.css}" href="/css/base.css">
+    <link rel="stylesheet" th:href="@{/css/setup.css}" href="/css/setup.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">메인 콘텐츠로 이동</a>
+<div class="page-shell">
+    <div th:replace="~{layout/header :: siteHeader}"></div>
+
+    <main class="setup-page" id="main-content">
+        <div class="admin-shell" data-admin-shell>
+            <aside class="admin-sidebar" data-admin-sidebar>
+                <th:block th:replace="~{pages/admin/sidebar :: content}"></th:block>
+            </aside>
+
+            <div class="admin-main" data-admin-main>
+                <th:block th:replace="~{pages/admin/companies :: content}"></th:block>
+                <th:block th:replace="~{pages/admin/users :: content}"></th:block>
+                <th:block th:replace="~{pages/admin/orders :: content}"></th:block>
+                <th:block th:replace="~{pages/admin/settlements :: content}"></th:block>
+            </div>
+        </div>
+    </main>
+</div>
+<script th:src="@{/js/admin-navigation.js}" defer></script>
+<script th:if="${adminAlert != null}" th:inline="javascript">
+    alert([[${adminAlert}]]);
+</script>
+</body>
+</html>

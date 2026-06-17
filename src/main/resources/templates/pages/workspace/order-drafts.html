@@ -1,0 +1,38 @@
+<th:block xmlns:th="http://www.thymeleaf.org" th:fragment="content">
+    <section class="setup-section" th:if="${activeCommerceSection == 'order-drafts'}">
+        <h2>주문 초안</h2>
+        <div class="existing-company-card commerce-card">
+            <strong>주문 초안</strong>
+            <p class="panel-copy" th:if="${#lists.isEmpty(commerceView.purchaseOrders)}">
+                아직 생성된 주문 초안이 없습니다.
+            </p>
+            <div class="order-list"
+                 th:if="${!#lists.isEmpty(commerceView.purchaseOrders)}"
+                 th:attr="data-selected-order-id=${selectedPurchaseOrderId},data-csrf-header=${_csrf.headerName},data-csrf-token=${_csrf.token}">
+                <article class="existing-company-card commerce-card order-list-card"
+                         th:each="orderItem : ${commerceView.purchaseOrders}"
+                         th:id="|purchase-order-${orderItem.purchaseOrderId}|">
+                    <div class="order-list-heading">
+                        <strong th:text="'주문 #' + ${orderItem.purchaseOrderId}">주문</strong>
+                        <span class="order-list-status" th:text="${orderItem.statusLabel}">주문 초안</span>
+                    </div>
+                    <div class="commerce-list">
+                        <span th:text="'원본 요청 #' + ${orderItem.purchaseRequestId}">요청</span>
+                        <span th:text="${#numbers.formatDecimal(orderItem.totalAmount, 1, 2)}">0.00</span>
+                    </div>
+                    <div class="hero-actions">
+                        <a class="hero-button hero-button-secondary"
+                           th:href="|/workspace?section=commerce&commerceSection=order-drafts&orderId=${orderItem.purchaseOrderId}|"
+                           th:attr="data-order-toggle=${orderItem.purchaseOrderId},aria-expanded=${selectedPurchaseOrderId != null and selectedPurchaseOrderId == orderItem.purchaseOrderId}">
+                            주문 상세 보기
+                        </a>
+                    </div>
+                    <div class="existing-company-card commerce-card order-detail-card"
+                         hidden
+                         th:attr="data-order-detail-panel=${orderItem.purchaseOrderId},data-order-endpoint=|/api/commerce/purchase-orders/${orderItem.purchaseOrderId}|,data-submit-endpoint=|/api/commerce/purchase-orders/${orderItem.purchaseOrderId}/submit-for-platform-approval|,data-cancel-endpoint=|/api/commerce/purchase-orders/${orderItem.purchaseOrderId}/cancel|,data-pay-endpoint=|/api/commerce/purchase-orders/${orderItem.purchaseOrderId}/pay|">
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+</th:block>

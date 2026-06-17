@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="content">
+    <section class="setup-card" th:if="${activeSection == 'users'}">
+        <p class="panel-kicker">Users</p>
+        <h1>플랫폼 사용자 관리</h1>
+        <p class="setup-lead">
+            전체 사용자 상태와 구매 역할, COMPANY_ADMIN 권한을 사용자 단위로 관리합니다.
+        </p>
+
+        <section class="setup-section">
+            <h2>플랫폼 사용자 목록</h2>
+            <p class="panel-copy" th:if="${#lists.isEmpty(platformAdminUsers)}">
+                등록된 사용자가 없습니다.
+            </p>
+            <div class="existing-company-card" th:each="userItem : ${platformAdminUsers}">
+                <strong th:text="${userItem.displayName + ' / ' + userItem.email}">Admin / admin@example.com</strong>
+                <span th:text="'계정 유형: ' + ${userItem.accountTypeLabel}">계정 유형: 회사 사용자</span>
+                <span th:text="|Company: ${userItem.companyName != null ? userItem.companyName : 'None'}|">Company: None</span>
+                <span th:text="${'상태: ' + (userItem.status == 'ACTIVE' ? '활성' : '비활성')}">상태: 활성</span>
+                <span th:if="${userItem.purchasingRoleLabel != null}" th:text="'구매 역할: ' + ${userItem.purchasingRoleLabel}">구매 역할: 카트 사용자</span>
+                <span th:if="${userItem.companyAdmin}">회사 관리자</span>
+
+                <div class="hero-actions">
+                    <form th:action="@{/admin/users/status}" method="post">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <input type="hidden" name="userId" th:value="${userItem.userId}">
+                        <input type="hidden" name="status" value="ACTIVE">
+                        <button class="hero-button hero-button-secondary" type="submit">활성화</button>
+                    </form>
+                    <form th:action="@{/admin/users/status}" method="post">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <input type="hidden" name="userId" th:value="${userItem.userId}">
+                        <input type="hidden" name="status" value="INACTIVE">
+                        <button class="hero-button hero-button-secondary" type="submit">비활성화</button>
+                    </form>
+                </div>
+
+                <div class="hero-actions" th:if="${userItem.accountType != 'PLATFORM_ADMIN'}">
+                    <form class="admin-inline-form" th:action="@{/admin/users/purchasing-role}" method="post">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <input type="hidden" name="userId" th:value="${userItem.userId}">
+                        <select class="setup-input" name="roleName">
+                            <option th:each="roleOption : ${purchasingRoleOptions}"
+                                    th:value="${roleOption}"
+                                    th:text="${roleOption == 'CART_USER' ? '카트 사용자' : (roleOption == 'PURCHASER' ? '구매 담당자' : (roleOption == 'APPROVER' ? '승인 담당자' : roleOption))}"
+                                    th:selected="${roleOption == userItem.purchasingRole}">
+                                카트 사용자
+                            </option>
+                        </select>
+                        <button class="hero-button hero-button-primary" type="submit">구매 역할 변경</button>
+                    </form>
+                </div>
+
+                <div class="hero-actions" th:if="${userItem.accountType != 'PLATFORM_ADMIN'}">
+                    <form th:action="@{/admin/users/company-admin}" method="post">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <input type="hidden" name="userId" th:value="${userItem.userId}">
+                        <input type="hidden" name="companyAdmin" value="true">
+                        <button class="hero-button hero-button-primary" type="submit">COMPANY_ADMIN 부여</button>
+                    </form>
+                    <form th:action="@{/admin/users/company-admin}" method="post">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <input type="hidden" name="userId" th:value="${userItem.userId}">
+                        <input type="hidden" name="companyAdmin" value="false">
+                        <button class="hero-button hero-button-secondary" type="submit">COMPANY_ADMIN 해제</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <section class="setup-section">
+            <h2>다음 이동</h2>
+            <p class="panel-copy">
+                회사 관리 화면으로 돌아가거나 현재 관리자 세션을 종료할 수 있습니다.
+            </p>
+            <div class="hero-actions">
+                <a class="hero-button hero-button-secondary" href="/admin/companies">회사 관리 보기</a>
+                <a class="hero-button hero-button-secondary" href="/admin/orders">주문 승인 보기</a>
+                <a class="hero-button hero-button-secondary" href="/">홈으로 이동</a>
+                <form th:action="@{/logout}" method="post">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <button class="hero-button hero-button-primary" type="submit">로그아웃</button>
+                </form>
+            </div>
+        </section>
+    </section>
+</th:block>
+</body>
+</html>

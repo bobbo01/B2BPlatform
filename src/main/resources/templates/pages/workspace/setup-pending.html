@@ -1,0 +1,151 @@
+<th:block xmlns:th="http://www.thymeleaf.org" th:fragment="content">
+    <section class="setup-card" th:if="${pendingSetup}">
+        <p class="panel-kicker">Workspace Setup</p>
+        <h1>회사 연결을 완료해 주세요</h1>
+        <p class="setup-lead">
+            로그인 인증은 완료되었습니다.
+            <strong th:text="${state.email}">user@example.com</strong>
+            계정으로 사용할 회사를 선택하거나 새 회사 등록 요청을 보내면 워크스페이스를 계속 사용할 수 있습니다.
+        </p>
+
+        <dl class="setup-summary" aria-label="인증 계정 정보">
+            <div>
+                <dt>이메일</dt>
+                <dd th:text="${state.email}">user@example.com</dd>
+            </div>
+            <div>
+                <dt>기본 도메인</dt>
+                <dd th:text="${state.emailDomain}">example.com</dd>
+            </div>
+            <div>
+                <dt>이름</dt>
+                <dd th:text="${state.resolvedName}">홍길동</dd>
+            </div>
+        </dl>
+
+        <div class="setup-error" th:if="${errorMessage}" th:text="${errorMessage}">오류 메시지</div>
+
+        <section class="setup-section" th:if="${companyRegistrationRequest != null and companyRegistrationRequest.status == 'PENDING'}">
+            <h2>회사 등록 요청이 접수되었습니다</h2>
+            <p class="panel-copy">
+                <strong th:text="${companyRegistrationRequest.requestedCompanyName}">Example Inc.</strong>
+                회사 등록 요청은 플랫폼 관리자 확인 대기 중입니다.
+            </p>
+            <dl class="setup-summary" aria-label="회사 등록 요청 정보">
+                <div>
+                    <dt>회사명</dt>
+                    <dd th:text="${companyRegistrationRequest.requestedCompanyName}">Example Inc.</dd>
+                </div>
+                <div>
+                    <dt>회사 도메인</dt>
+                    <dd th:text="${companyRegistrationRequest.requestedCompanyDomain}">example.com</dd>
+                </div>
+                <div>
+                    <dt>상태</dt>
+                    <dd th:text="${companyRegistrationRequest.status}">PENDING</dd>
+                </div>
+            </dl>
+            <p class="setup-hint">승인 후 다시 로그인하면 회사 계정으로 진입할 수 있습니다.</p>
+        </section>
+
+        <section class="setup-section" th:if="${companyRegistrationRequest != null and companyRegistrationRequest.status == 'APPROVED'}">
+            <h2>회사 등록 요청이 승인되었습니다</h2>
+            <p class="panel-copy">회사 계정 생성이 완료되었습니다. 다시 로그인하면 승인된 회사 계정으로 바로 연결됩니다.</p>
+        </section>
+
+        <section class="setup-section" th:if="${companyRegistrationRequest != null and companyRegistrationRequest.status == 'REJECTED'}">
+            <h2>회사 등록 요청이 반려되었습니다</h2>
+            <p class="panel-copy">회사명과 회사 도메인을 확인한 뒤 다시 요청해 주세요.</p>
+            <p class="setup-hint" th:if="${companyRegistrationRequest.rejectionReason != null}" th:text="'반려 사유: ' + ${companyRegistrationRequest.rejectionReason}">반려 사유</p>
+        </section>
+
+        <section class="setup-section" th:if="${companyJoinRequest != null and companyJoinRequest.status == 'PENDING'}">
+            <h2>회사 참여 요청이 접수되었습니다</h2>
+            <p class="panel-copy">
+                <strong th:text="${companyJoinRequest.companyName}">Example Inc.</strong>
+                회사의 <code>COMPANY_ADMIN</code> 확인 대기 중입니다.
+            </p>
+            <dl class="setup-summary" aria-label="회사 참여 요청 정보">
+                <div>
+                    <dt>회사명</dt>
+                    <dd th:text="${companyJoinRequest.companyName}">Example Inc.</dd>
+                </div>
+                <div>
+                    <dt>회사 도메인</dt>
+                    <dd th:text="${companyJoinRequest.companyDomain}">example.com</dd>
+                </div>
+                <div>
+                    <dt>기본 역할</dt>
+                    <dd th:text="${companyJoinRequest.requestedRoleLabel}">카트 사용자</dd>
+                </div>
+            </dl>
+            <div class="hero-actions">
+                <form th:action="@{/workspace/company-join-request/cancel}" method="post">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <button class="hero-button hero-button-secondary" type="submit">참여 요청 취소</button>
+                </form>
+            </div>
+        </section>
+
+        <section class="setup-section" th:if="${companyJoinRequest != null and companyJoinRequest.status == 'APPROVED'}">
+            <h2>회사 참여 요청이 승인되었습니다</h2>
+            <p class="panel-copy">회사 사용자 계정 연결이 완료되었습니다. 다시 로그인하면 회사 워크스페이스로 진입할 수 있습니다.</p>
+        </section>
+
+        <section class="setup-section" th:if="${companyJoinRequest != null and companyJoinRequest.status == 'REJECTED'}">
+            <h2>회사 참여 요청이 거절되었습니다</h2>
+            <p class="panel-copy">회사 관리자에게 확인한 뒤 다시 요청해 주세요.</p>
+            <p class="setup-hint" th:if="${companyJoinRequest.rejectionReason != null}" th:text="'거절 사유: ' + ${companyJoinRequest.rejectionReason}">거절 사유</p>
+        </section>
+
+        <section class="setup-section" th:if="${companyJoinRequest != null and companyJoinRequest.status == 'CANCELLED'}">
+            <h2>회사 참여 요청을 취소했습니다</h2>
+            <p class="panel-copy">다른 회사로 다시 참여 요청을 보낼 수 있습니다.</p>
+        </section>
+
+        <section class="setup-section"
+                 th:if="${(companyRegistrationRequest == null or companyRegistrationRequest.status == 'REJECTED') and (companyJoinRequest == null or companyJoinRequest.status == 'REJECTED' or companyJoinRequest.status == 'CANCELLED')}">
+            <div th:if="${state.publicEmailDomain and setupMode == 'join'}">
+                <h2>공용 이메일은 초대 코드가 필요합니다</h2>
+                <p class="panel-copy">
+                    <strong th:text="${state.emailDomain}">gmail.com</strong>
+                    같은 공용 이메일 도메인으로는 회사를 자동 매칭하지 않습니다.
+                    회사에서 받은 초대 코드로 참여 요청을 진행해 주세요.
+                </p>
+                <form class="setup-form" th:action="@{/workspace}" method="post" th:object="${form}">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <input type="hidden" name="action" value="useInviteCode">
+
+                    <label class="setup-label" for="inviteCode">초대 코드</label>
+                    <input class="setup-input" id="inviteCode" type="text" th:field="*{inviteCode}" placeholder="초대 코드를 입력해 주세요.">
+                    <p class="setup-hint">초대 코드는 회사별로 발급되는 고유 코드입니다.</p>
+
+                    <button class="hero-button hero-button-primary" type="submit">참여 요청 보내기</button>
+                </form>
+            </div>
+
+            <div th:if="${setupMode == 'register'}">
+                <h2>새 회사 등록</h2>
+                <p class="panel-copy">
+                    아직 등록된 회사가 없다면 회사명과 회사 도메인을 입력해 등록 요청을 보낼 수 있습니다.
+                    플랫폼 관리자 승인 후 회사와 첫 사용자 계정이 생성됩니다.
+                </p>
+                <form class="setup-form" th:action="@{/workspace}" method="post" th:object="${form}">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <input type="hidden" name="action" value="register">
+
+                    <label class="setup-label" for="companyName">회사명</label>
+                    <input class="setup-input" id="companyName" type="text" th:field="*{companyName}" placeholder="회사명을 입력해 주세요.">
+                    <p class="field-error" th:if="${#fields.hasErrors('companyName')}" th:errors="*{companyName}">회사명을 입력해 주세요.</p>
+
+                    <label class="setup-label" for="companyDomain">회사 도메인</label>
+                    <input class="setup-input" id="companyDomain" type="text" th:field="*{companyDomain}" placeholder="example.com">
+                    <p class="field-error" th:if="${#fields.hasErrors('companyDomain')}" th:errors="*{companyDomain}">회사 도메인을 입력해 주세요.</p>
+                    <p class="setup-hint">기본값은 로그인 이메일 도메인입니다. 필요하면 직접 수정할 수 있습니다.</p>
+
+                    <button class="hero-button hero-button-primary" type="submit">회사 등록 요청 보내기</button>
+                </form>
+            </div>
+        </section>
+    </section>
+</th:block>

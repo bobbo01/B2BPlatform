@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="content">
+    <section class="setup-card">
+        <p class="panel-kicker">Platform Admin</p>
+        <dl class="setup-summary" aria-label="운영 계정 정보">
+            <div>
+                <dt>이메일</dt>
+                <dd th:text="${workspaceUser.email}">user@example.com</dd>
+            </div>
+            <div>
+                <dt>계정 유형</dt>
+                <dd>PLATFORM_ADMIN</dd>
+            </div>
+        </dl>
+    </section>
+    <nav class="admin-nav" aria-label="관리 메뉴">
+        <div class="workspace-nav-group"
+             th:classappend="${activeSection == 'companies' or activeSection == 'users'} ? ' is-open' : ''">
+            <a class="admin-nav-link"
+               th:classappend="${activeSection == 'companies' or activeSection == 'users'} ? ' is-active' : ''"
+               th:href="@{/admin/companies}">
+                <strong>Platform Management</strong>
+                <span>회사 관리와 사용자 관리를 한 그룹으로 묶고, 하위 메뉴에서 나눠서 이동합니다.</span>
+            </a>
+            <div class="workspace-subnav">
+                <a class="workspace-subnav-link"
+                   th:classappend="${activeSection == 'companies'} ? ' is-active' : ''"
+                   th:href="@{/admin/companies}">
+                    회사 관리
+                </a>
+                <a class="workspace-subnav-link"
+                   th:classappend="${activeSection == 'users'} ? ' is-active' : ''"
+                   th:href="@{/admin/users}">
+                    사용자 관리
+                </a>
+            </div>
+        </div>
+        <div class="workspace-nav-group"
+             th:classappend="${activeSection == 'orders'} ? ' is-open' : ''">
+            <a class="admin-nav-link"
+               th:classappend="${activeSection == 'orders'} ? ' is-active' : ''"
+               th:href="@{/admin/orders(orderFilter=${activeOrderFilter != null ? activeOrderFilter : 'pending'})}">
+                <strong>플랫폼 주문 승인</strong>
+                <span>플랫폼 주문을 상태별로 나눠 보고, 승인 이력과 반려 이력을 함께 확인합니다.</span>
+            </a>
+            <div class="workspace-subnav">
+                <a class="workspace-subnav-link"
+                   th:classappend="${activeSection == 'orders' and activeOrderFilter == 'pending'} ? ' is-active' : ''"
+                   th:href="@{/admin/orders(orderFilter='pending')}">
+                    승인 대기
+                </a>
+                <a class="workspace-subnav-link"
+                   th:classappend="${activeSection == 'orders' and activeOrderFilter == 'approved'} ? ' is-active' : ''"
+                   th:href="@{/admin/orders(orderFilter='approved')}">
+                    결제 대기
+                </a>
+                <a class="workspace-subnav-link"
+                   th:classappend="${activeSection == 'orders' and activeOrderFilter == 'delivery'} ? ' is-active' : ''"
+                   th:href="@{/admin/orders(orderFilter='delivery')}">
+                    배송 운영
+                </a>
+                <a class="workspace-subnav-link"
+                   th:classappend="${activeSection == 'orders' and activeOrderFilter == 'rejected'} ? ' is-active' : ''"
+                   th:href="@{/admin/orders(orderFilter='rejected')}">
+                    반려
+                </a>
+                <a class="workspace-subnav-link"
+                   th:classappend="${activeSection == 'orders' and activeOrderFilter == 'all'} ? ' is-active' : ''"
+                   th:href="@{/admin/orders(orderFilter='all')}">
+                    전체
+                </a>
+            </div>
+        </div>
+        <div class="workspace-nav-group"
+             th:classappend="${activeSection == 'settlements'} ? ' is-open' : ''">
+            <a class="admin-nav-link"
+               th:classappend="${activeSection == 'settlements'} ? ' is-active' : ''"
+               th:href="@{/admin/settlements}">
+                <strong>정산</strong>
+                <span>배송 완료 주문과 전체 매출, 정산 완료 상태를 관리합니다.</span>
+            </a>
+        </div>
+    </nav>
+</th:block>
+</body>
+</html>

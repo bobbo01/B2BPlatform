@@ -1,0 +1,33 @@
+﻿<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<header class="site-header" th:fragment="siteHeader">
+    <a class="brand" href="/" aria-label="SupplyHub 홈으로 이동">
+        <span class="brand-mark">SH</span>
+        <span class="brand-text">
+            <strong>SupplyHub</strong>
+            <span>Enterprise Commerce Workspace</span>
+        </span>
+    </a>
+
+    <nav class="site-nav" aria-label="주요 메뉴">
+        <a href="/products">상품 / 카탈로그</a>
+        <a href="/#about">서비스 소개</a>
+        <a href="/#how-it-works">이용 방법</a>
+        <a href="/#contact">문의</a>
+    </nav>
+
+    <div class="header-actions">
+        <a class="action-link action-link-primary"
+           href="/#access-panel"
+           sec:authorize="isAnonymous()">회원가입</a>
+        <form th:action="@{/logout}" method="post" sec:authorize="isAuthenticated()">
+            <button class="action-link action-link-primary" type="submit">로그아웃</button>
+        </form>
+    </div>
+</header>
+<script th:if="${globalAlertMessage != null}" th:inline="javascript">
+    alert([[${globalAlertMessage}]]);
+</script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SupplyHub | Workspace</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard/dist/web/static/pretendard.css">
+    <link rel="stylesheet" th:href="@{/css/base.css}" href="/css/base.css">
+    <link rel="stylesheet" th:href="@{/css/setup.css}" href="/css/setup.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">메인 콘텐츠로 이동</a>
+<div class="page-shell">
+    <div th:replace="~{layout/header :: siteHeader}"></div>
+
+    <main class="setup-page" id="main-content">
+        <th:block th:replace="~{pages/workspace/setup-pending :: content}"></th:block>
+
+        <section th:unless="${pendingSetup}">
+            <div class="admin-shell workspace-shell">
+                <aside class="admin-sidebar workspace-sidebar">
+                    <nav class="admin-nav" aria-label="워크스페이스 메뉴" th:if="${!workspaceUser.platformAdmin}">
+                        <a class="admin-nav-link"
+                           th:classappend="${activeSection == 'overview'} ? ' is-active' : ''"
+                           th:href="@{/workspace(section='overview')}">
+                            <strong>Overview</strong>
+                            <span>회사 요약, 첫 COMPANY_ADMIN 요청, 기본 이동</span>
+                        </a>
+                        <a class="admin-nav-link"
+                           th:if="${workspaceUser.companyAdmin}"
+                           th:classappend="${activeSection == 'company-users'} ? ' is-active' : ''"
+                           th:href="@{/workspace(section='company-users')}">
+                            <strong>Company Users</strong>
+                            <span>회사 참여 요청 검토와 사용자 구매 역할 관리</span>
+                        </a>
+                        <div class="workspace-nav-group"
+                             th:classappend="${activeSection == 'commerce'} ? ' is-open' : ''">
+                            <a class="admin-nav-link"
+                               th:classappend="${activeSection == 'commerce'} ? ' is-active' : ''"
+                               th:href="@{/workspace(section='commerce', commerceSection=${activeCommerceSection})}">
+                                <strong>Commerce Flow</strong>
+                                <span>카트, 구매 요청, 승인함, 주문 초안</span>
+                            </a>
+                            <div class="workspace-subnav">
+                                <a class="workspace-subnav-link"
+                                   th:classappend="${activeSection == 'commerce' and activeCommerceSection == 'cart'} ? ' is-active' : ''"
+                                   th:href="@{/workspace(section='commerce', commerceSection='cart')}">
+                                    카트
+                                </a>
+                                <a class="workspace-subnav-link"
+                                   th:classappend="${activeSection == 'commerce' and activeCommerceSection == 'purchase-requests'} ? ' is-active' : ''"
+                                   th:href="@{/workspace(section='commerce', commerceSection='purchase-requests')}">
+                                    구매 요청
+                                </a>
+                                <a class="workspace-subnav-link"
+                                   th:if="${commerceView != null and commerceView.canApprove}"
+                                   th:classappend="${activeSection == 'commerce' and activeCommerceSection == 'approvals'} ? ' is-active' : ''"
+                                   th:href="@{/workspace(section='commerce', commerceSection='approvals')}">
+                                    승인함
+                                </a>
+                                <a class="workspace-subnav-link"
+                                   th:classappend="${activeSection == 'commerce' and activeCommerceSection == 'order-drafts'} ? ' is-active' : ''"
+                                   th:href="@{/workspace(section='commerce', commerceSection='order-drafts')}">
+                                    주문 초안
+                                </a>
+                            </div>
+                        </div>
+                    </nav>
+                </aside>
+
+                <div class="admin-main">
+                    <th:block th:replace="~{pages/workspace/overview :: content}"></th:block>
+                    <th:block th:replace="~{pages/workspace/company-users :: content}"></th:block>
+                    <th:block th:replace="~{pages/workspace/commerce-shell :: content}"></th:block>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+<script th:if="${activeSection == 'commerce' and activeCommerceSection == 'order-drafts'}"
+        th:src="@{/js/workspace-order-drafts.js}"
+        defer></script>
+<script th:if="${commerceAlert != null}" th:inline="javascript">
+    alert([[${commerceAlert}]]);
+</script>
+<script th:if="${commerceMessage != null}" th:inline="javascript">
+    alert([[${commerceMessage}]]);
+</script>
+</body>
+</html>

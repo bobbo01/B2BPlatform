@@ -1,0 +1,45 @@
+<th:block xmlns:th="http://www.thymeleaf.org" th:fragment="content">
+    <section class="setup-section" th:if="${activeCommerceSection == 'approvals' and commerceView.canApprove}">
+        <h2>승인함</h2>
+        <div class="existing-company-card commerce-card">
+            <strong>승인 대기함</strong>
+            <p class="panel-copy" th:if="${#lists.isEmpty(commerceView.pendingApprovals)}">
+                대기 중인 승인 요청이 없습니다.
+            </p>
+            <div th:if="${!#lists.isEmpty(commerceView.pendingApprovals)}" th:each="approvalItem : ${commerceView.pendingApprovals}">
+                <div class="commerce-list">
+                    <span th:text="${approvalItem.requesterName}">요청자</span>
+                    <span th:text="${approvalItem.requesterEmail}">requester@example.com</span>
+                </div>
+                <div class="commerce-list">
+                    <span th:text="'항목 수 ' + ${approvalItem.itemCount}">항목 수</span>
+                    <span th:text="${#numbers.formatDecimal(approvalItem.totalAmount, 1, 2)}">0.00</span>
+                </div>
+                <div class="commerce-list commerce-list-stack" th:each="item : ${approvalItem.items}">
+                    <div class="commerce-list">
+                        <span th:text="${item.productName}">상품명</span>
+                        <span th:text="|${item.quantity} x ${item.currencyCode} ${#numbers.formatDecimal(item.unitPrice, 1, 2)}|">수량</span>
+                    </div>
+                    <div class="commerce-list">
+                        <span th:text="'합계 ' + ${item.currencyCode} + ' ' + ${#numbers.formatDecimal(item.lineTotal, 1, 2)}">합계</span>
+                        <span th:text="'상품 ID ' + ${item.productId}">상품 ID</span>
+                    </div>
+                </div>
+                <div class="hero-actions">
+                    <form th:action="@{/commerce/approval-requests/approve}" method="post">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <input type="hidden" name="approvalRequestId" th:value="${approvalItem.approvalRequestId}">
+                        <textarea class="setup-input" name="decisionNote" rows="3" placeholder="승인 메모 (선택)"></textarea>
+                        <button class="hero-button hero-button-primary" type="submit">승인</button>
+                    </form>
+                    <form th:action="@{/commerce/approval-requests/reject}" method="post">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <input type="hidden" name="approvalRequestId" th:value="${approvalItem.approvalRequestId}">
+                        <textarea class="setup-input" name="decisionNote" rows="3" placeholder="거절 사유를 입력해 주세요." required></textarea>
+                        <button class="hero-button hero-button-secondary" type="submit">거절</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+</th:block>

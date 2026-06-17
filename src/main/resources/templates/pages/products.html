@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SupplyHub | 상품 카탈로그</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard/dist/web/static/pretendard.css">
+    <link rel="stylesheet" th:href="@{/css/base.css}" href="/css/base.css">
+    <link rel="stylesheet" th:href="@{/css/products.css}" href="/css/products.css">
+    <script defer th:src="@{/js/products.js}" src="/js/products.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main-content">메인 콘텐츠로 이동</a>
+<div class="page-shell">
+    <div th:replace="~{layout/header :: siteHeader}"></div>
+
+    <main class="catalog-page" id="main-content" th:fragment="catalogPageContent" data-catalog-content>
+        <section class="catalog-hero">
+            <div class="catalog-hero-copy">
+                <p class="section-kicker">Product Catalog</p>
+                <h1>카테고리와 검색으로 필요한 상품만 빠르게 찾는 카탈로그</h1>
+                <p class="catalog-lead">
+                    좌측 카테고리를 선택하고 상품명, 브랜드, SKU 기준으로 검색하세요.
+                    결과는 현재 선택한 카테고리 안에서만 보여주고, 한 페이지에 6개씩 표시합니다.
+                </p>
+                <div class="catalog-overview">
+                    <div>
+                        <dt>선택 카테고리</dt>
+                        <dd th:text="${catalogPage.selectedCategoryName()}">전체</dd>
+                    </div>
+                    <div>
+                        <dt>검색어</dt>
+                        <dd th:text="${catalogPage.searchQuery().isBlank() ? '없음' : catalogPage.searchQuery()}">없음</dd>
+                    </div>
+                    <div>
+                        <dt>조회 결과</dt>
+                        <dd th:text="${catalogPage.totalItems()} + '개'">0개</dd>
+                    </div>
+                    <div>
+                        <dt>페이지</dt>
+                        <dd th:text="${catalogPage.currentPage()} + ' / ' + ${catalogPage.totalPages()}">1 / 1</dd>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="catalog-side-panel" th:if="${user == null}">
+                <p class="panel-kicker">Guest Access</p>
+                <span class="catalog-side-eyebrow">Open catalog, guided onboarding</span>
+                <h2>카탈로그는 공개로 보고, 거래 시작은 로그인 후 이어집니다.</h2>
+                <p class="panel-copy">
+                    상품 검토는 지금 바로 가능하고, 실제 거래 흐름과 워크스페이스 진입은 기업 계정 로그인 이후 진행됩니다.
+                </p>
+                <div class="catalog-side-highlights">
+                    <div>
+                        <strong>01</strong>
+                        <span>카테고리와 검색어만으로 공개 상품군을 빠르게 좁혀 볼 수 있습니다.</span>
+                    </div>
+                    <div>
+                        <strong>02</strong>
+                        <span>회원가입 이후에는 같은 상품 흐름이 구매 요청과 승인 단계까지 자연스럽게 이어집니다.</span>
+                    </div>
+                </div>
+                <div class="catalog-side-strip" aria-label="게스트 카탈로그 안내">
+                    <div>
+                        <span>탐색 범위</span>
+                        <strong>전체 공개 상품</strong>
+                    </div>
+                    <div>
+                        <span>거래 시작</span>
+                        <strong>로그인 이후</strong>
+                    </div>
+                </div>
+                <div class="hero-actions">
+                    <a class="hero-button hero-button-primary" href="/#access-panel">회원가입 / 거래 시작</a>
+                    <a class="hero-button hero-button-secondary" href="/#how-it-works">이용 방법 보기</a>
+                </div>
+            </aside>
+
+            <aside class="catalog-side-panel" th:if="${user != null}">
+                <p class="panel-kicker">Signed In</p>
+                <span class="catalog-side-eyebrow">Active workspace route</span>
+                <h2 th:text="${user.displayName} + '님, 필요한 카테고리부터 확인해 보세요'">로그인 사용자</h2>
+                <p class="panel-copy">
+                    카테고리와 검색으로 필요한 상품만 좁혀 보고, 워크스페이스에서 다음 작업으로 이어갈 수 있습니다.
+                </p>
+                <div class="catalog-side-highlights">
+                    <div>
+                        <strong>01</strong>
+                        <span>현재 보고 있는 카탈로그 흐름을 그대로 워크스페이스 구매 작업으로 이어갈 수 있습니다.</span>
+                    </div>
+                    <div>
+                        <strong>02</strong>
+                        <span>상품 탐색, 구매 요청, 승인, 주문 초안이 같은 용어와 구조로 연결됩니다.</span>
+                    </div>
+                </div>
+                <div class="catalog-side-strip" aria-label="로그인 사용자 카탈로그 안내">
+                    <div>
+                        <span>다음 작업</span>
+                        <strong>워크스페이스 이동</strong>
+                    </div>
+                    <div>
+                        <span>계정 상태</span>
+                        <strong>로그인 완료</strong>
+                    </div>
+                </div>
+                <div class="hero-actions">
+                    <a class="hero-button hero-button-primary" href="/workspace">워크스페이스 이동</a>
+                    <form th:action="@{/logout}" method="post">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <button class="hero-button hero-button-secondary" type="submit">로그아웃</button>
+                    </form>
+                </div>
+            </aside>
+        </section>
+
+        <section class="catalog-browser">
+            <aside class="catalog-filter-panel">
+                <div class="catalog-filter-head">
+                    <p class="section-kicker">Category</p>
+                    <h2>카테고리</h2>
+                </div>
+
+                <nav class="category-nav" aria-label="상품 카테고리">
+                    <a class="category-nav-link"
+                       th:each="categoryOption : ${catalogPage.categories()}"
+                       th:classappend="${categoryOption.selected()} ? ' is-active' : ''"
+                       th:href="@{/products(category=${categoryOption.categoryCode()}, q=${catalogPage.searchQuery()}, page=1)}"
+                       th:attr="data-category-code=${categoryOption.categoryCode()}">
+                        <span th:text="${categoryOption.categoryName()}">전체</span>
+                        <strong th:text="${categoryOption.productCount()}">0</strong>
+                    </a>
+                </nav>
+            </aside>
+
+            <section class="catalog-results-panel">
+                <div class="catalog-results-head">
+                    <div class="section-heading">
+                        <p class="section-kicker">Active Products</p>
+                        <h2 th:text="${catalogPage.selectedCategoryName()} + ' 카테고리 상품'">전체 카테고리 상품</h2>
+                    </div>
+
+                    <form class="catalog-search-form" action="/products" method="get">
+                        <input type="hidden" name="category" th:value="${catalogPage.selectedCategoryCode()}">
+                        <input type="hidden" name="page" value="1">
+                        <label class="catalog-search-label" for="catalog-search">검색</label>
+                        <input class="catalog-search-input"
+                               id="catalog-search"
+                               name="q"
+                               type="search"
+                               autocomplete="off"
+                               placeholder="상품명, 브랜드, SKU 검색"
+                               th:value="${catalogPage.searchQuery()}"
+                               data-search-input>
+                    </form>
+                </div>
+
+                <div class="catalog-result-summary">
+                    <p th:text="'현재 ' + ${catalogPage.selectedCategoryName()} + '에서 ' + ${catalogPage.totalItems()} + '개 상품이 검색되었습니다.'">
+                        현재 전체에서 0개 상품이 검색되었습니다.
+                    </p>
+                </div>
+
+                <div class="empty-state" th:if="${#lists.isEmpty(catalogPage.products())}">
+                    <strong>조건에 맞는 상품이 없습니다.</strong>
+                    <p>다른 카테고리를 선택하거나 검색어를 변경해 보세요.</p>
+                </div>
+
+                <div class="product-grid" th:if="${!#lists.isEmpty(catalogPage.products())}">
+                    <article class="product-card" th:each="product : ${catalogPage.products()}">
+                        <div class="product-image-frame">
+                            <img class="product-image"
+                                 th:if="${product.imageUrl != null && !product.imageUrl.isBlank()}"
+                                 th:src="@{${product.imageUrl}}"
+                                 th:alt="${product.productName()}">
+                            <div class="product-image product-image-fallback"
+                                 th:if="${product.imageUrl == null || product.imageUrl.isBlank()}">
+                                <span th:text="${product.productName()}">상품 이미지 없음</span>
+                            </div>
+                        </div>
+                        <div class="product-card-top">
+                            <span class="product-category" th:text="${product.categoryName()}">카테고리</span>
+                            <span class="product-sku" th:text="${product.sku()}">SKU-001</span>
+                        </div>
+                        <h3 th:text="${product.productName()}">상품명</h3>
+                        <p class="product-brand"
+                           th:text="${product.brand() != null && !product.brand().isBlank() ? product.brand() : '브랜드 미지정'}">
+                            브랜드
+                        </p>
+                        <dl class="product-meta">
+                            <div>
+                                <dt>단가</dt>
+                                <dd th:text="|${product.currencyCode()} ${#numbers.formatDecimal(product.unitPrice(), 1, 2)}|">KRW 10,000.00</dd>
+                            </div>
+                            <div>
+                                <dt>최소 주문</dt>
+                                <dd th:text="${product.minOrderQty()} + '개'">1개</dd>
+                            </div>
+                        </dl>
+                        <a class="hero-button hero-button-secondary product-link"
+                           th:href="@{/products/{productId}(productId=${product.id()})}">
+                            상세 보기
+                        </a>
+                    </article>
+                </div>
+
+                <nav class="catalog-pagination" th:if="${catalogPage.totalPages() > 1}" aria-label="상품 페이지">
+                    <a class="pagination-link"
+                       th:classappend="${!catalogPage.hasPreviousPageGroup()} ? ' is-disabled' : ''"
+                       th:href="${catalogPage.hasPreviousPageGroup()} ? @{/products(category=${catalogPage.selectedCategoryCode()}, q=${catalogPage.searchQuery()}, page=${catalogPage.previousPageGroupPage()})} : '#'"
+                       aria-label="이전 페이지 묶음">
+                        이전
+                    </a>
+
+                    <a class="pagination-link"
+                       th:each="pageNumber : ${catalogPage.pageNumbers()}"
+                       th:classappend="${pageNumber == catalogPage.currentPage()} ? ' is-active' : ''"
+                       th:href="@{/products(category=${catalogPage.selectedCategoryCode()}, q=${catalogPage.searchQuery()}, page=${pageNumber})}"
+                       th:text="${pageNumber}">
+                        1
+                    </a>
+
+                    <a class="pagination-link"
+                       th:classappend="${!catalogPage.hasNextPageGroup()} ? ' is-disabled' : ''"
+                       th:href="${catalogPage.hasNextPageGroup()} ? @{/products(category=${catalogPage.selectedCategoryCode()}, q=${catalogPage.searchQuery()}, page=${catalogPage.nextPageGroupPage()})} : '#'"
+                       aria-label="다음 페이지 묶음">
+                        다음
+                    </a>
+                </nav>
+            </section>
+        </section>
+    </main>
+
+    <div th:replace="~{layout/footer :: siteFooter}"></div>
+</div>
+</body>
+</html>

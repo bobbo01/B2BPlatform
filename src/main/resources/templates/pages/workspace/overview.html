@@ -1,0 +1,157 @@
+<th:block xmlns:th="http://www.thymeleaf.org" th:fragment="content">
+    <section class="setup-card" th:if="${workspaceUser.platformAdmin or activeSection == 'overview'}">
+        <p class="panel-kicker">Workspace</p>
+        <h1 th:text="${workspaceUser.platformAdmin} ? '플랫폼 관리자 정보' : '회사 개요'">회사 개요</h1>
+        <div class="setup-error" th:if="${commerceError}" th:text="${commerceError}">Commerce error</div>
+        <div class="setup-error" th:if="${workspaceError}" th:text="${workspaceError}">Workspace error</div>
+        <div class="setup-hint" th:if="${workspaceMessage}" th:text="${workspaceMessage}">Workspace message</div>
+
+        <p class="setup-lead" th:if="${workspaceUser.platformAdmin}">
+            <strong th:text="${workspaceUser.displayName}">관리자</strong>
+            계정은 회사 소속이 없는 <strong>PLATFORM_ADMIN</strong> 계정입니다.
+        </p>
+        <p class="setup-lead" th:unless="${workspaceUser.platformAdmin}">
+            <strong th:text="${workspaceUser.displayName}">홍길동</strong>
+            계정은 <strong th:text="${workspaceCompany.companyName}">Example Inc.</strong>
+            회사와 연결되어 있습니다.
+        </p>
+
+        <dl class="setup-summary" aria-label="플랫폼 관리자 계정 정보" th:if="${workspaceUser.platformAdmin}">
+            <div>
+                <dt>이메일</dt>
+                <dd th:text="${workspaceUser.email}">user@example.com</dd>
+            </div>
+            <div>
+                <dt>계정 유형</dt>
+                <dd>PLATFORM_ADMIN</dd>
+            </div>
+            <div>
+                <dt>소속 회사</dt>
+                <dd>없음</dd>
+            </div>
+        </dl>
+
+        <dl class="setup-summary" aria-label="회사 정보" th:unless="${workspaceUser.platformAdmin}">
+            <div>
+                <dt>이메일</dt>
+                <dd th:text="${workspaceUser.email}">user@example.com</dd>
+            </div>
+            <div>
+                <dt>회사명</dt>
+                <dd th:text="${workspaceCompany.companyName}">Example Inc.</dd>
+            </div>
+            <div>
+                <dt>회사 도메인</dt>
+                <dd th:text="${workspaceCompany.companyDomain}">example.com</dd>
+            </div>
+            <div>
+                <dt>초대 코드</dt>
+                <dd th:text="${workspaceCompany.inviteCode != null and !workspaceCompany.inviteCode.isBlank()} ? ${workspaceCompany.inviteCode} : '활성 초대 코드 없음'">ABCD2345EF</dd>
+            </div>
+            <div>
+                <dt>구매 역할</dt>
+                <dd>
+                    <span th:text="${workspaceUser.roleLabel}">카트 사용자</span>
+                    <span th:if="${workspaceUser.companyAdmin}" th:text="' / 회사 관리자'"> / 회사 관리자</span>
+                </dd>
+            </div>
+        </dl>
+
+        <p class="setup-hint" th:if="${!workspaceUser.platformAdmin and workspaceCompany.inviteCode != null}">
+            공용 이메일 사용자는 이 초대 코드로 회사 참여 요청을 보낼 수 있습니다.
+        </p>
+        <p class="setup-hint" th:if="${!workspaceUser.platformAdmin and (workspaceCompany.inviteCode == null or workspaceCompany.inviteCode.isBlank())}">
+            현재 활성 초대 코드가 없습니다. 새 코드를 재발급해 회사 참여 요청을 받을 수 있습니다.
+        </p>
+        <div class="hero-actions" th:if="${workspaceUser.companyAdmin}">
+            <form th:action="@{/workspace/company/invite-code/regenerate}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <button class="hero-button hero-button-secondary" type="submit">초대 코드 재발급</button>
+            </form>
+            <form th:if="${workspaceCompany.inviteCode != null and !workspaceCompany.inviteCode.isBlank()}"
+                  th:action="@{/workspace/company/invite-code/revoke}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <button class="hero-button hero-button-secondary" type="submit">초대 코드 비활성화</button>
+            </form>
+        </div>
+
+        <section class="setup-section" th:if="${workspaceUser.companyAdmin}">
+            <h2>회사 정보 수정</h2>
+            <p class="panel-copy">COMPANY_ADMIN은 자기 회사의 회사명과 회사 도메인을 수정할 수 있습니다.</p>
+            <form class="setup-form" th:action="@{/workspace/company/profile}" method="post" th:object="${companyProfileForm}">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+                <label class="setup-label" for="companyProfileName">회사명</label>
+                <input class="setup-input" id="companyProfileName" type="text" th:field="*{companyName}" placeholder="회사명을 입력해 주세요.">
+
+                <label class="setup-label" for="companyProfileDomain">회사 도메인</label>
+                <input class="setup-input" id="companyProfileDomain" type="text" th:field="*{companyDomain}" placeholder="example.com">
+                <p class="setup-hint">중복되지 않는 회사 도메인만 사용할 수 있습니다.</p>
+
+                <div class="hero-actions">
+                    <button class="hero-button hero-button-primary" type="submit">회사 정보 저장</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="setup-section"
+                 th:if="${!workspaceUser.platformAdmin and (firstCompanyAdminRequest == null or firstCompanyAdminRequest.status != 'APPROVED')}">
+            <h2>첫 COMPANY_ADMIN 요청</h2>
+            <p class="panel-copy" th:if="${canCreateFirstCompanyAdminRequest}">
+                현재 계정은 이 회사를 최초로 등록한 사용자이므로 첫 <code>COMPANY_ADMIN</code> 요청을 보낼 수 있습니다.
+            </p>
+            <p class="panel-copy" th:if="${!canCreateFirstCompanyAdminRequest and firstCompanyAdminRequest == null}">
+                현재 계정은 첫 <code>COMPANY_ADMIN</code> 요청 자격이 없거나 이미 관리자 권한을 보유하고 있습니다.
+            </p>
+            <p class="panel-copy" th:if="${firstCompanyAdminRequest != null}">
+                현재 요청 상태:
+                <strong th:text="${firstCompanyAdminRequest.status}">PENDING</strong>
+            </p>
+            <div class="existing-company-card"
+                 th:if="${firstCompanyAdminRequest != null and firstCompanyAdminRequest.status == 'PENDING'}">
+                <strong>승인 대기 중</strong>
+                <span th:text="|회사명 ${firstCompanyAdminRequest.companyName}|">회사명 Example Inc.</span>
+                <span th:text="|회사 도메인 ${firstCompanyAdminRequest.companyDomain}|">회사 도메인 example.com</span>
+                <span th:text="|요청자 ${firstCompanyAdminRequest.requesterName} / ${firstCompanyAdminRequest.requesterEmail}|">요청자 홍길동 / user@example.com</span>
+                <p class="panel-copy">첫 <code>COMPANY_ADMIN</code> 요청이 접수되었고 현재 플랫폼 관리자 승인 대기 상태입니다.</p>
+            </div>
+
+            <div class="hero-actions" th:if="${canCreateFirstCompanyAdminRequest}">
+                <form th:action="@{/workspace/first-company-admin-request}" method="post">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <button class="hero-button hero-button-primary" type="submit">COMPANY_ADMIN 요청하기</button>
+                </form>
+            </div>
+
+            <div class="hero-actions" th:if="${firstCompanyAdminRequest != null and firstCompanyAdminRequest.status == 'PENDING'}">
+                <form th:action="@{/workspace/first-company-admin-request/cancel}" method="post">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <button class="hero-button hero-button-secondary" type="submit">요청 취소</button>
+                </form>
+            </div>
+        </section>
+
+        <section class="setup-section">
+            <h2>다음 이동</h2>
+            <p class="panel-copy" th:if="${workspaceUser.platformAdmin}">
+                플랫폼 운영 작업은 관리자 페이지에서 진행할 수 있습니다.
+            </p>
+            <p class="panel-copy" th:unless="${workspaceUser.platformAdmin}">
+                필요한 작업에 따라 카탈로그, 사용자 관리, 구매 흐름 화면으로 이동할 수 있습니다.
+            </p>
+            <div class="hero-actions">
+                <a class="hero-button hero-button-primary" th:if="${workspaceUser.platformAdmin}" href="/admin/companies">관리자 페이지 가기</a>
+                <a class="hero-button hero-button-primary" th:if="${!workspaceUser.platformAdmin}" href="/products">카탈로그 보기</a>
+                <a class="hero-button hero-button-secondary" href="/">홈으로 이동</a>
+                <form th:if="${!workspaceUser.platformAdmin}" th:action="@{/workspace/leave}" method="post">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <button class="hero-button hero-button-secondary" type="submit">회사 탈퇴</button>
+                </form>
+                <form th:action="@{/logout}" method="post">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <button class="hero-button hero-button-secondary" type="submit">로그아웃</button>
+                </form>
+            </div>
+        </section>
+    </section>
+</th:block>

@@ -1,0 +1,939 @@
+var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
+  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
+}) : x)(function(x) {
+  if (typeof require !== "undefined")
+    return require.apply(this, arguments);
+  throw Error('Dynamic require of "' + x + '" is not supported');
+});
+
+// browse/src/cli.ts
+var fs2 = (() => ({}));
+
+// node:path
+function assertPath(path) {
+  if (typeof path !== "string")
+    throw TypeError("Path must be a string. Received " + JSON.stringify(path));
+}
+function normalizeStringPosix(path, allowAboveRoot) {
+  var res = "", lastSegmentLength = 0, lastSlash = -1, dots = 0, code;
+  for (var i = 0;i <= path.length; ++i) {
+    if (i < path.length)
+      code = path.charCodeAt(i);
+    else if (code === 47)
+      break;
+    else
+      code = 47;
+    if (code === 47) {
+      if (lastSlash === i - 1 || dots === 1)
+        ;
+      else if (lastSlash !== i - 1 && dots === 2) {
+        if (res.length < 2 || lastSegmentLength !== 2 || res.charCodeAt(res.length - 1) !== 46 || res.charCodeAt(res.length - 2) !== 46) {
+          if (res.length > 2) {
+            var lastSlashIndex = res.lastIndexOf("/");
+            if (lastSlashIndex !== res.length - 1) {
+              if (lastSlashIndex === -1)
+                res = "", lastSegmentLength = 0;
+              else
+                res = res.slice(0, lastSlashIndex), lastSegmentLength = res.length - 1 - res.lastIndexOf("/");
+              lastSlash = i, dots = 0;
+              continue;
+            }
+          } else if (res.length === 2 || res.length === 1) {
+            res = "", lastSegmentLength = 0, lastSlash = i, dots = 0;
+            continue;
+          }
+        }
+        if (allowAboveRoot) {
+          if (res.length > 0)
+            res += "/..";
+          else
+            res = "..";
+          lastSegmentLength = 2;
+        }
+      } else {
+        if (res.length > 0)
+          res += "/" + path.slice(lastSlash + 1, i);
+        else
+          res = path.slice(lastSlash + 1, i);
+        lastSegmentLength = i - lastSlash - 1;
+      }
+      lastSlash = i, dots = 0;
+    } else if (code === 46 && dots !== -1)
+      ++dots;
+    else
+      dots = -1;
+  }
+  return res;
+}
+function _format(sep, pathObject) {
+  var dir = pathObject.dir || pathObject.root, base = pathObject.base || (pathObject.name || "") + (pathObject.ext || "");
+  if (!dir)
+    return base;
+  if (dir === pathObject.root)
+    return dir + base;
+  return dir + sep + base;
+}
+function resolve() {
+  var resolvedPath = "", resolvedAbsolute = false, cwd;
+  for (var i = arguments.length - 1;i >= -1 && !resolvedAbsolute; i--) {
+    var path;
+    if (i >= 0)
+      path = arguments[i];
+    else {
+      if (cwd === undefined)
+        cwd = process.cwd();
+      path = cwd;
+    }
+    if (assertPath(path), path.length === 0)
+      continue;
+    resolvedPath = path + "/" + resolvedPath, resolvedAbsolute = path.charCodeAt(0) === 47;
+  }
+  if (resolvedPath = normalizeStringPosix(resolvedPath, !resolvedAbsolute), resolvedAbsolute)
+    if (resolvedPath.length > 0)
+      return "/" + resolvedPath;
+    else
+      return "/";
+  else if (resolvedPath.length > 0)
+    return resolvedPath;
+  else
+    return ".";
+}
+function normalize(path) {
+  if (assertPath(path), path.length === 0)
+    return ".";
+  var isAbsolute = path.charCodeAt(0) === 47, trailingSeparator = path.charCodeAt(path.length - 1) === 47;
+  if (path = normalizeStringPosix(path, !isAbsolute), path.length === 0 && !isAbsolute)
+    path = ".";
+  if (path.length > 0 && trailingSeparator)
+    path += "/";
+  if (isAbsolute)
+    return "/" + path;
+  return path;
+}
+function isAbsolute(path) {
+  return assertPath(path), path.length > 0 && path.charCodeAt(0) === 47;
+}
+function join() {
+  if (arguments.length === 0)
+    return ".";
+  var joined;
+  for (var i = 0;i < arguments.length; ++i) {
+    var arg = arguments[i];
+    if (assertPath(arg), arg.length > 0)
+      if (joined === undefined)
+        joined = arg;
+      else
+        joined += "/" + arg;
+  }
+  if (joined === undefined)
+    return ".";
+  return normalize(joined);
+}
+function relative(from, to) {
+  if (assertPath(from), assertPath(to), from === to)
+    return "";
+  if (from = resolve(from), to = resolve(to), from === to)
+    return "";
+  var fromStart = 1;
+  for (;fromStart < from.length; ++fromStart)
+    if (from.charCodeAt(fromStart) !== 47)
+      break;
+  var fromEnd = from.length, fromLen = fromEnd - fromStart, toStart = 1;
+  for (;toStart < to.length; ++toStart)
+    if (to.charCodeAt(toStart) !== 47)
+      break;
+  var toEnd = to.length, toLen = toEnd - toStart, length = fromLen < toLen ? fromLen : toLen, lastCommonSep = -1, i = 0;
+  for (;i <= length; ++i) {
+    if (i === length) {
+      if (toLen > length) {
+        if (to.charCodeAt(toStart + i) === 47)
+          return to.slice(toStart + i + 1);
+        else if (i === 0)
+          return to.slice(toStart + i);
+      } else if (fromLen > length) {
+        if (from.charCodeAt(fromStart + i) === 47)
+          lastCommonSep = i;
+        else if (i === 0)
+          lastCommonSep = 0;
+      }
+      break;
+    }
+    var fromCode = from.charCodeAt(fromStart + i), toCode = to.charCodeAt(toStart + i);
+    if (fromCode !== toCode)
+      break;
+    else if (fromCode === 47)
+      lastCommonSep = i;
+  }
+  var out = "";
+  for (i = fromStart + lastCommonSep + 1;i <= fromEnd; ++i)
+    if (i === fromEnd || from.charCodeAt(i) === 47)
+      if (out.length === 0)
+        out += "..";
+      else
+        out += "/..";
+  if (out.length > 0)
+    return out + to.slice(toStart + lastCommonSep);
+  else {
+    if (toStart += lastCommonSep, to.charCodeAt(toStart) === 47)
+      ++toStart;
+    return to.slice(toStart);
+  }
+}
+function _makeLong(path) {
+  return path;
+}
+function dirname(path) {
+  if (assertPath(path), path.length === 0)
+    return ".";
+  var code = path.charCodeAt(0), hasRoot = code === 47, end = -1, matchedSlash = true;
+  for (var i = path.length - 1;i >= 1; --i)
+    if (code = path.charCodeAt(i), code === 47) {
+      if (!matchedSlash) {
+        end = i;
+        break;
+      }
+    } else
+      matchedSlash = false;
+  if (end === -1)
+    return hasRoot ? "/" : ".";
+  if (hasRoot && end === 1)
+    return "//";
+  return path.slice(0, end);
+}
+function basename(path, ext) {
+  if (ext !== undefined && typeof ext !== "string")
+    throw TypeError('"ext" argument must be a string');
+  assertPath(path);
+  var start = 0, end = -1, matchedSlash = true, i;
+  if (ext !== undefined && ext.length > 0 && ext.length <= path.length) {
+    if (ext.length === path.length && ext === path)
+      return "";
+    var extIdx = ext.length - 1, firstNonSlashEnd = -1;
+    for (i = path.length - 1;i >= 0; --i) {
+      var code = path.charCodeAt(i);
+      if (code === 47) {
+        if (!matchedSlash) {
+          start = i + 1;
+          break;
+        }
+      } else {
+        if (firstNonSlashEnd === -1)
+          matchedSlash = false, firstNonSlashEnd = i + 1;
+        if (extIdx >= 0)
+          if (code === ext.charCodeAt(extIdx)) {
+            if (--extIdx === -1)
+              end = i;
+          } else
+            extIdx = -1, end = firstNonSlashEnd;
+      }
+    }
+    if (start === end)
+      end = firstNonSlashEnd;
+    else if (end === -1)
+      end = path.length;
+    return path.slice(start, end);
+  } else {
+    for (i = path.length - 1;i >= 0; --i)
+      if (path.charCodeAt(i) === 47) {
+        if (!matchedSlash) {
+          start = i + 1;
+          break;
+        }
+      } else if (end === -1)
+        matchedSlash = false, end = i + 1;
+    if (end === -1)
+      return "";
+    return path.slice(start, end);
+  }
+}
+function extname(path) {
+  assertPath(path);
+  var startDot = -1, startPart = 0, end = -1, matchedSlash = true, preDotState = 0;
+  for (var i = path.length - 1;i >= 0; --i) {
+    var code = path.charCodeAt(i);
+    if (code === 47) {
+      if (!matchedSlash) {
+        startPart = i + 1;
+        break;
+      }
+      continue;
+    }
+    if (end === -1)
+      matchedSlash = false, end = i + 1;
+    if (code === 46) {
+      if (startDot === -1)
+        startDot = i;
+      else if (preDotState !== 1)
+        preDotState = 1;
+    } else if (startDot !== -1)
+      preDotState = -1;
+  }
+  if (startDot === -1 || end === -1 || preDotState === 0 || preDotState === 1 && startDot === end - 1 && startDot === startPart + 1)
+    return "";
+  return path.slice(startDot, end);
+}
+function format(pathObject) {
+  if (pathObject === null || typeof pathObject !== "object")
+    throw TypeError('The "pathObject" argument must be of type Object. Received type ' + typeof pathObject);
+  return _format("/", pathObject);
+}
+function parse(path) {
+  assertPath(path);
+  var ret = { root: "", dir: "", base: "", ext: "", name: "" };
+  if (path.length === 0)
+    return ret;
+  var code = path.charCodeAt(0), isAbsolute2 = code === 47, start;
+  if (isAbsolute2)
+    ret.root = "/", start = 1;
+  else
+    start = 0;
+  var startDot = -1, startPart = 0, end = -1, matchedSlash = true, i = path.length - 1, preDotState = 0;
+  for (;i >= start; --i) {
+    if (code = path.charCodeAt(i), code === 47) {
+      if (!matchedSlash) {
+        startPart = i + 1;
+        break;
+      }
+      continue;
+    }
+    if (end === -1)
+      matchedSlash = false, end = i + 1;
+    if (code === 46) {
+      if (startDot === -1)
+        startDot = i;
+      else if (preDotState !== 1)
+        preDotState = 1;
+    } else if (startDot !== -1)
+      preDotState = -1;
+  }
+  if (startDot === -1 || end === -1 || preDotState === 0 || preDotState === 1 && startDot === end - 1 && startDot === startPart + 1) {
+    if (end !== -1)
+      if (startPart === 0 && isAbsolute2)
+        ret.base = ret.name = path.slice(1, end);
+      else
+        ret.base = ret.name = path.slice(startPart, end);
+  } else {
+    if (startPart === 0 && isAbsolute2)
+      ret.name = path.slice(1, startDot), ret.base = path.slice(1, end);
+    else
+      ret.name = path.slice(startPart, startDot), ret.base = path.slice(startPart, end);
+    ret.ext = path.slice(startDot, end);
+  }
+  if (startPart > 0)
+    ret.dir = path.slice(0, startPart - 1);
+  else if (isAbsolute2)
+    ret.dir = "/";
+  return ret;
+}
+var sep = "/";
+var delimiter = ":";
+var posix = ((p) => (p.posix = p, p))({ resolve, normalize, isAbsolute, join, relative, _makeLong, dirname, basename, extname, format, parse, sep, delimiter, win32: null, posix: null });
+
+// browse/src/config.ts
+var fs = (() => ({}));
+function getGitRoot() {
+  try {
+    const proc = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], {
+      stdout: "pipe",
+      stderr: "pipe",
+      timeout: 2000
+    });
+    if (proc.exitCode !== 0)
+      return null;
+    return proc.stdout.toString().trim() || null;
+  } catch {
+    return null;
+  }
+}
+function resolveConfig(env = process.env) {
+  let stateFile;
+  let stateDir;
+  let projectDir;
+  if (env.BROWSE_STATE_FILE) {
+    stateFile = env.BROWSE_STATE_FILE;
+    stateDir = dirname(stateFile);
+    projectDir = dirname(stateDir);
+  } else {
+    projectDir = getGitRoot() || process.cwd();
+    stateDir = join(projectDir, ".gstack");
+    stateFile = join(stateDir, "browse.json");
+  }
+  return {
+    projectDir,
+    stateDir,
+    stateFile,
+    consoleLog: join(stateDir, "browse-console.log"),
+    networkLog: join(stateDir, "browse-network.log"),
+    dialogLog: join(stateDir, "browse-dialog.log")
+  };
+}
+function ensureStateDir(config) {
+  try {
+    fs.mkdirSync(config.stateDir, { recursive: true });
+  } catch (err) {
+    if (err.code === "EACCES") {
+      throw new Error(`Cannot create state directory ${config.stateDir}: permission denied`);
+    }
+    if (err.code === "ENOTDIR") {
+      throw new Error(`Cannot create state directory ${config.stateDir}: a file exists at that path`);
+    }
+    throw err;
+  }
+  const gitignorePath = join(config.projectDir, ".gitignore");
+  try {
+    const content = fs.readFileSync(gitignorePath, "utf-8");
+    if (!content.match(/^\.gstack\/?$/m)) {
+      const separator = content.endsWith(`
+`) ? "" : `
+`;
+      fs.appendFileSync(gitignorePath, `${separator}.gstack/
+`);
+    }
+  } catch (err) {
+    if (err.code !== "ENOENT") {
+      const logPath = join(config.stateDir, "browse-server.log");
+      try {
+        fs.appendFileSync(logPath, `[${new Date().toISOString()}] Warning: could not update .gitignore at ${gitignorePath}: ${err.message}
+`);
+      } catch {}
+    }
+  }
+}
+function readVersionHash(execPath = process.execPath) {
+  try {
+    const versionFile = resolve(dirname(execPath), ".version");
+    return fs.readFileSync(versionFile, "utf-8").trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+// browse/src/cli.ts
+var __dirname = "C:\\project\\supplyhub\\gstack\\browse\\src";
+var config = resolveConfig();
+var IS_WINDOWS = process.platform === "win32";
+var MAX_START_WAIT = IS_WINDOWS ? 15000 : process.env.CI ? 30000 : 8000;
+function resolveServerScript(env = process.env, metaDir = import.meta.dir, execPath = process.execPath) {
+  if (env.BROWSE_SERVER_SCRIPT) {
+    return env.BROWSE_SERVER_SCRIPT;
+  }
+  if (!metaDir.includes("$bunfs")) {
+    const direct = resolve(metaDir, "server.ts");
+    if (fs2.existsSync(direct)) {
+      return direct;
+    }
+  }
+  if (execPath) {
+    const adjacent = resolve(dirname(execPath), "..", "src", "server.ts");
+    if (fs2.existsSync(adjacent)) {
+      return adjacent;
+    }
+  }
+  throw new Error("Cannot find server.ts. Set BROWSE_SERVER_SCRIPT env or run from the browse source tree.");
+}
+var SERVER_SCRIPT = resolveServerScript();
+function resolveNodeServerScript(metaDir = import.meta.dir, execPath = process.execPath) {
+  if (!metaDir.includes("$bunfs")) {
+    const distScript = resolve(metaDir, "..", "dist", "server-node.mjs");
+    if (fs2.existsSync(distScript))
+      return distScript;
+  }
+  if (execPath) {
+    const adjacent = resolve(dirname(execPath), "server-node.mjs");
+    if (fs2.existsSync(adjacent))
+      return adjacent;
+  }
+  return null;
+}
+var NODE_SERVER_SCRIPT = IS_WINDOWS ? resolveNodeServerScript() : null;
+if (IS_WINDOWS && !NODE_SERVER_SCRIPT) {
+  throw new Error("server-node.mjs not found. Run `bun run build` to generate the Windows server bundle.");
+}
+function readState() {
+  try {
+    const data = fs2.readFileSync(config.stateFile, "utf-8");
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
+}
+function isProcessAlive(pid) {
+  if (IS_WINDOWS) {
+    try {
+      const result = Bun.spawnSync(["tasklist", "/FI", `PID eq ${pid}`, "/NH", "/FO", "CSV"], { stdout: "pipe", stderr: "pipe", timeout: 3000 });
+      return result.stdout.toString().includes(`"${pid}"`);
+    } catch {
+      return false;
+    }
+  }
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+async function isServerHealthy(port) {
+  try {
+    const resp = await fetch(`http://127.0.0.1:${port}/health`, {
+      signal: AbortSignal.timeout(2000)
+    });
+    if (!resp.ok)
+      return false;
+    const health = await resp.json();
+    return health.status === "healthy";
+  } catch {
+    return false;
+  }
+}
+async function killServer(pid) {
+  if (!isProcessAlive(pid))
+    return;
+  if (IS_WINDOWS) {
+    try {
+      Bun.spawnSync(["taskkill", "/PID", String(pid), "/T", "/F"], { stdout: "pipe", stderr: "pipe", timeout: 5000 });
+    } catch {}
+    const deadline2 = Date.now() + 2000;
+    while (Date.now() < deadline2 && isProcessAlive(pid)) {
+      await Bun.sleep(100);
+    }
+    return;
+  }
+  try {
+    process.kill(pid, "SIGTERM");
+  } catch {
+    return;
+  }
+  const deadline = Date.now() + 2000;
+  while (Date.now() < deadline && isProcessAlive(pid)) {
+    await Bun.sleep(100);
+  }
+  if (isProcessAlive(pid)) {
+    try {
+      process.kill(pid, "SIGKILL");
+    } catch {}
+  }
+}
+function cleanupLegacyState() {
+  if (IS_WINDOWS)
+    return;
+  try {
+    const files = fs2.readdirSync("/tmp").filter((f) => f.startsWith("browse-server") && f.endsWith(".json"));
+    for (const file of files) {
+      const fullPath = `/tmp/${file}`;
+      try {
+        const data = JSON.parse(fs2.readFileSync(fullPath, "utf-8"));
+        if (data.pid && isProcessAlive(data.pid)) {
+          const check = Bun.spawnSync(["ps", "-p", String(data.pid), "-o", "command="], {
+            stdout: "pipe",
+            stderr: "pipe",
+            timeout: 2000
+          });
+          const cmd = check.stdout.toString().trim();
+          if (cmd.includes("bun") || cmd.includes("server.ts")) {
+            try {
+              process.kill(data.pid, "SIGTERM");
+            } catch {}
+          }
+        }
+        fs2.unlinkSync(fullPath);
+      } catch {}
+    }
+    const logFiles = fs2.readdirSync("/tmp").filter((f) => f.startsWith("browse-console") || f.startsWith("browse-network") || f.startsWith("browse-dialog"));
+    for (const file of logFiles) {
+      try {
+        fs2.unlinkSync(`/tmp/${file}`);
+      } catch {}
+    }
+  } catch {}
+}
+async function startServer(extraEnv) {
+  ensureStateDir(config);
+  try {
+    fs2.unlinkSync(config.stateFile);
+  } catch {}
+  try {
+    fs2.unlinkSync(join(config.stateDir, "browse-startup-error.log"));
+  } catch {}
+  let proc = null;
+  if (IS_WINDOWS && NODE_SERVER_SCRIPT) {
+    const launcherCode = `const{spawn}=require('child_process');` + `spawn(process.execPath,[${JSON.stringify(NODE_SERVER_SCRIPT)}],` + `{detached:true,stdio:['ignore','ignore','ignore'],env:Object.assign({},process.env,` + `{BROWSE_STATE_FILE:${JSON.stringify(config.stateFile)}})}).unref()`;
+    Bun.spawnSync(["node", "-e", launcherCode], { stdio: ["ignore", "ignore", "ignore"] });
+  } else {
+    proc = Bun.spawn(["bun", "run", SERVER_SCRIPT], {
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, BROWSE_STATE_FILE: config.stateFile, ...extraEnv }
+    });
+    proc.unref();
+  }
+  const start = Date.now();
+  while (Date.now() - start < MAX_START_WAIT) {
+    const state = readState();
+    if (state && await isServerHealthy(state.port)) {
+      return state;
+    }
+    await Bun.sleep(100);
+  }
+  if (proc?.stderr) {
+    const reader = proc.stderr.getReader();
+    const { value } = await reader.read();
+    if (value) {
+      const errText = new TextDecoder().decode(value);
+      throw new Error(`Server failed to start:
+${errText}`);
+    }
+  } else {
+    const errorLogPath = join(config.stateDir, "browse-startup-error.log");
+    try {
+      const errorLog = fs2.readFileSync(errorLogPath, "utf-8").trim();
+      if (errorLog) {
+        throw new Error(`Server failed to start:
+${errorLog}`);
+      }
+    } catch (e) {
+      if (e.code !== "ENOENT")
+        throw e;
+    }
+  }
+  throw new Error(`Server failed to start within ${MAX_START_WAIT / 1000}s`);
+}
+function acquireServerLock() {
+  const lockPath = `${config.stateFile}.lock`;
+  try {
+    const fd = fs2.openSync(lockPath, "wx");
+    fs2.writeSync(fd, `${process.pid}
+`);
+    fs2.closeSync(fd);
+    return () => {
+      try {
+        fs2.unlinkSync(lockPath);
+      } catch {}
+    };
+  } catch {
+    try {
+      const holderPid = parseInt(fs2.readFileSync(lockPath, "utf8").trim(), 10);
+      if (holderPid && isProcessAlive(holderPid)) {
+        return null;
+      }
+      fs2.unlinkSync(lockPath);
+      return acquireServerLock();
+    } catch {
+      return null;
+    }
+  }
+}
+async function ensureServer() {
+  const state = readState();
+  if (state && await isServerHealthy(state.port)) {
+    const currentVersion = readVersionHash();
+    if (currentVersion && state.binaryVersion && currentVersion !== state.binaryVersion) {
+      console.error("[browse] Binary updated, restarting server...");
+      await killServer(state.pid);
+      return startServer();
+    }
+    return state;
+  }
+  if (state && state.mode === "headed" && isProcessAlive(state.pid)) {
+    console.error(`[browse] Headed server running (PID ${state.pid}) but not responding.`);
+    console.error(`[browse] Run '$B connect' to restart.`);
+    process.exit(1);
+  }
+  ensureStateDir(config);
+  const releaseLock = acquireServerLock();
+  if (!releaseLock) {
+    console.error("[browse] Another instance is starting the server, waiting...");
+    const start = Date.now();
+    while (Date.now() - start < MAX_START_WAIT) {
+      const freshState = readState();
+      if (freshState && await isServerHealthy(freshState.port))
+        return freshState;
+      await Bun.sleep(200);
+    }
+    throw new Error("Timed out waiting for another instance to start the server");
+  }
+  try {
+    const freshState = readState();
+    if (freshState && await isServerHealthy(freshState.port)) {
+      return freshState;
+    }
+    if (state && state.pid) {
+      await killServer(state.pid);
+    }
+    console.error("[browse] Starting server...");
+    return await startServer();
+  } finally {
+    releaseLock();
+  }
+}
+async function sendCommand(state, command, args, retries = 0) {
+  const body = JSON.stringify({ command, args });
+  try {
+    const resp = await fetch(`http://127.0.0.1:${state.port}/command`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${state.token}`
+      },
+      body,
+      signal: AbortSignal.timeout(30000)
+    });
+    if (resp.status === 401) {
+      console.error("[browse] Auth failed — server may have restarted. Retrying...");
+      const newState = readState();
+      if (newState && newState.token !== state.token) {
+        return sendCommand(newState, command, args);
+      }
+      throw new Error("Authentication failed");
+    }
+    const text = await resp.text();
+    if (resp.ok) {
+      process.stdout.write(text);
+      if (!text.endsWith(`
+`))
+        process.stdout.write(`
+`);
+    } else {
+      try {
+        const err = JSON.parse(text);
+        console.error(err.error || text);
+        if (err.hint)
+          console.error(err.hint);
+      } catch {
+        console.error(text);
+      }
+      process.exit(1);
+    }
+  } catch (err) {
+    if (err.name === "AbortError") {
+      console.error("[browse] Command timed out after 30s");
+      process.exit(1);
+    }
+    if (err.code === "ECONNREFUSED" || err.code === "ECONNRESET" || err.message?.includes("fetch failed")) {
+      if (retries >= 1)
+        throw new Error("[browse] Server crashed twice in a row — aborting");
+      console.error("[browse] Server connection lost. Restarting...");
+      const oldState = readState();
+      if (oldState && oldState.pid) {
+        await killServer(oldState.pid);
+      }
+      const newState = await startServer();
+      return sendCommand(newState, command, args, retries + 1);
+    }
+    throw err;
+  }
+}
+async function main() {
+  const args = process.argv.slice(2);
+  if (args.length === 0 || args[0] === "--help" || args[0] === "-h") {
+    console.log(`gstack browse — Fast headless browser for AI coding agents
+
+Usage: browse <command> [args...]
+
+Navigation:     goto <url> | back | forward | reload | url
+Content:        text | html [sel] | links | forms | accessibility
+Interaction:    click <sel> | fill <sel> <val> | select <sel> <val>
+                hover <sel> | type <text> | press <key>
+                scroll [sel] | wait <sel|--networkidle|--load> | viewport <WxH>
+                upload <sel> <file1> [file2...]
+                cookie-import <json-file>
+                cookie-import-browser [browser] [--domain <d>]
+Inspection:     js <expr> | eval <file> | css <sel> <prop> | attrs <sel>
+                console [--clear|--errors] | network [--clear] | dialog [--clear]
+                cookies | storage [set <k> <v>] | perf
+                is <prop> <sel> (visible|hidden|enabled|disabled|checked|editable|focused)
+Visual:         screenshot [--viewport] [--clip x,y,w,h] [@ref|sel] [path]
+                pdf [path] | responsive [prefix]
+Snapshot:       snapshot [-i] [-c] [-d N] [-s sel] [-D] [-a] [-o path] [-C]
+                -D/--diff: diff against previous snapshot
+                -a/--annotate: annotated screenshot with ref labels
+                -C/--cursor-interactive: find non-ARIA clickable elements
+Compare:        diff <url1> <url2>
+Multi-step:     chain (reads JSON from stdin)
+Tabs:           tabs | tab <id> | newtab [url] | closetab [id]
+Server:         status | cookie <n>=<v> | header <n>:<v>
+                useragent <str> | stop | restart
+Dialogs:        dialog-accept [text] | dialog-dismiss
+
+Refs:           After 'snapshot', use @e1, @e2... as selectors:
+                click @e3 | fill @e4 "value" | hover @e1
+                @c refs from -C: click @c1`);
+    process.exit(0);
+  }
+  cleanupLegacyState();
+  const command = args[0];
+  const commandArgs = args.slice(1);
+  if (command === "connect") {
+    const existingState = readState();
+    if (existingState && existingState.mode === "headed" && isProcessAlive(existingState.pid)) {
+      try {
+        const resp = await fetch(`http://127.0.0.1:${existingState.port}/health`, {
+          signal: AbortSignal.timeout(2000)
+        });
+        if (resp.ok) {
+          console.log("Already connected in headed mode.");
+          process.exit(0);
+        }
+      } catch {}
+    }
+    if (existingState && isProcessAlive(existingState.pid)) {
+      try {
+        process.kill(existingState.pid, "SIGTERM");
+      } catch {}
+      await new Promise((resolve2) => setTimeout(resolve2, 2000));
+      if (isProcessAlive(existingState.pid)) {
+        try {
+          process.kill(existingState.pid, "SIGKILL");
+        } catch {}
+        await new Promise((resolve2) => setTimeout(resolve2, 1000));
+      }
+    }
+    const profileDir = join(process.env.HOME || "/tmp", ".gstack", "chromium-profile");
+    try {
+      const singletonLock = join(profileDir, "SingletonLock");
+      const lockTarget = fs2.readlinkSync(singletonLock);
+      const orphanPid = parseInt(lockTarget.split("-").pop() || "", 10);
+      if (orphanPid && isProcessAlive(orphanPid)) {
+        try {
+          process.kill(orphanPid, "SIGTERM");
+        } catch {}
+        await new Promise((resolve2) => setTimeout(resolve2, 1000));
+        if (isProcessAlive(orphanPid)) {
+          try {
+            process.kill(orphanPid, "SIGKILL");
+          } catch {}
+          await new Promise((resolve2) => setTimeout(resolve2, 500));
+        }
+      }
+    } catch {}
+    for (const lockFile of ["SingletonLock", "SingletonSocket", "SingletonCookie"]) {
+      try {
+        fs2.unlinkSync(join(profileDir, lockFile));
+      } catch {}
+    }
+    try {
+      fs2.unlinkSync(config.stateFile);
+    } catch {}
+    console.log("Launching headed Chromium with extension + sidebar agent...");
+    try {
+      const serverEnv = {
+        BROWSE_HEADED: "1",
+        BROWSE_PORT: "34567",
+        BROWSE_SIDEBAR_CHAT: "1"
+      };
+      const newState = await startServer(serverEnv);
+      const resp = await fetch(`http://127.0.0.1:${newState.port}/command`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${newState.token}`
+        },
+        body: JSON.stringify({ command: "status", args: [] }),
+        signal: AbortSignal.timeout(5000)
+      });
+      const status = await resp.text();
+      console.log(`Connected to real Chrome
+${status}`);
+      let agentScript = resolve(__dirname, "sidebar-agent.ts");
+      if (!fs2.existsSync(agentScript)) {
+        agentScript = resolve(dirname(process.execPath), "..", "src", "sidebar-agent.ts");
+      }
+      try {
+        if (!fs2.existsSync(agentScript)) {
+          throw new Error(`sidebar-agent.ts not found at ${agentScript}`);
+        }
+        const agentQueue = join(process.env.HOME || "/tmp", ".gstack", "sidebar-agent-queue.jsonl");
+        try {
+          fs2.writeFileSync(agentQueue, "");
+        } catch {}
+        let browseBin = resolve(__dirname, "..", "dist", "browse");
+        if (!fs2.existsSync(browseBin)) {
+          browseBin = process.execPath;
+        }
+        try {
+          const { spawnSync } = (()=>{throw new Error("Cannot require module "+"child_process");})();
+          spawnSync("pkill", ["-f", "sidebar-agent\\.ts"], { stdio: "ignore", timeout: 3000 });
+        } catch {}
+        const agentProc = Bun.spawn(["bun", "run", agentScript], {
+          cwd: config.projectDir,
+          env: {
+            ...process.env,
+            BROWSE_BIN: browseBin,
+            BROWSE_STATE_FILE: config.stateFile,
+            BROWSE_SERVER_PORT: String(newState.port)
+          },
+          stdio: ["ignore", "ignore", "ignore"]
+        });
+        agentProc.unref();
+        console.log(`[browse] Sidebar agent started (PID: ${agentProc.pid})`);
+      } catch (err) {
+        console.error(`[browse] Sidebar agent failed to start: ${err.message}`);
+        console.error(`[browse] Run manually: bun run ${agentScript}`);
+      }
+    } catch (err) {
+      console.error(`[browse] Connect failed: ${err.message}`);
+      process.exit(1);
+    }
+    process.exit(0);
+  }
+  if (command === "disconnect") {
+    const existingState = readState();
+    if (!existingState || existingState.mode !== "headed") {
+      console.log("Not in headed mode — nothing to disconnect.");
+      process.exit(0);
+    }
+    try {
+      const resp = await fetch(`http://127.0.0.1:${existingState.port}/command`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${existingState.token}`
+        },
+        body: JSON.stringify({ command: "disconnect", args: [] }),
+        signal: AbortSignal.timeout(3000)
+      });
+      if (resp.ok) {
+        console.log("Disconnected from real browser.");
+        process.exit(0);
+      }
+    } catch {}
+    if (isProcessAlive(existingState.pid)) {
+      try {
+        process.kill(existingState.pid, "SIGTERM");
+      } catch {}
+      await new Promise((resolve2) => setTimeout(resolve2, 2000));
+      if (isProcessAlive(existingState.pid)) {
+        try {
+          process.kill(existingState.pid, "SIGKILL");
+        } catch {}
+      }
+    }
+    const profileDir = join(process.env.HOME || "/tmp", ".gstack", "chromium-profile");
+    for (const lockFile of ["SingletonLock", "SingletonSocket", "SingletonCookie"]) {
+      try {
+        fs2.unlinkSync(join(profileDir, lockFile));
+      } catch {}
+    }
+    try {
+      fs2.unlinkSync(config.stateFile);
+    } catch {}
+    console.log("Disconnected (server was unresponsive — force cleaned).");
+    process.exit(0);
+  }
+  if (command === "chain" && commandArgs.length === 0) {
+    const stdin = await Bun.stdin.text();
+    commandArgs.push(stdin.trim());
+  }
+  const state = await ensureServer();
+  await sendCommand(state, command, commandArgs);
+}
+if (import.meta.main) {
+  main().catch((err) => {
+    console.error(`[browse] ${err.message}`);
+    process.exit(1);
+  });
+}
+export {
+  resolveServerScript,
+  resolveNodeServerScript,
+  isServerHealthy
+};
